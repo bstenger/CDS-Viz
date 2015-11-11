@@ -1,0 +1,168 @@
+
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  font: 10px sans-serif;
+}
+
+.link {
+  stroke: #aaa;
+}
+
+.node text {
+cursos:pointer;
+}
+
+.node circle{
+stroke:#fff;
+stroke-width:3px;
+fill:#555;
+}
+
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<br/><br/>
+<script>
+
+var num_scientists = 1;
+
+var width = 1200,
+    height = 800
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+var gnode = svg.selectAll(".node"),
+    glink = svg.selectAll(".link");
+var force = d3.layout.force()
+    .gravity(.05)
+    .distance(50)
+    .charge(-115)
+    .size([width, height]);
+
+var color = d3.scale.category20();
+
+var network = {"nodes":[],"links":[] };
+var subjects = {},
+      contributors = {},
+      author_lookup = {};
+
+d3.csv("./data/out.csv", function(author) {
+  author.forEach(function(a) {
+    var key = a["Query_text"];
+    var first_initial = key.split("_")[1];
+//    console.log(key);
+    if (Object.keys(subjects).indexOf(key) === -1) {
+      subjects[key] = {};
+      contributors[key] = {};
+//      author_lookup[key] = [a["First Name"],a["Last Name"],a["First Name"] + " " + a["Last Name"]];
+      author_lookup[key] = [a["First Name"] + " " + a["Last Name"],first_initial + ". " + a["Last Name"]];
+    }
+    var key2 = a["Arxiv_id"];
+    var array = a["Subject"].replace(/\[|\]| /g,"").split(",");
+//    console.log(key2);
+    subjects[key][key2] = array;
+    contributors[key][key2] = [];
+    var rgx_last = new RegExp(a["Last Name"]);
+    for (var i = 0; i < 200; i++) {
+      var contrib = a["Contributor_" + i];
+      if (/\w+/.test(contrib) && !(rgx_last.test(contrib))) {
+        contributors[key][key2].push(contrib);
+      } else if (/\w+/.test(a["Contributor_" + i]) && author_lookup[key].indexOf(contrib) === -1) {
+        var rgx_firstname = new RegExp("^" + a["First Name"] + " .* " + a["Last Name"]);
+        var rgx_firstinitial = new RegExp("^" + first_initial + ". " + a["Last Name"]);
+        if (rgx_firstname.test(contrib) || rgx_firstinitial.test(contrib)) {
+          author_lookup[key].push(contrib);
+        } else {
+//          contributors[key][key2].push(contrib); 
+        }
+      }
+    }
+  })
+  console.log(subjects);
+  console.log(author_lookup);
+  console.log(contributors);
+
+  network["nodes"] = Object.keys(author_lookup).map(function(author){ return {"group":0, "id":author}; });
+
+  force
+    .nodes(network.nodes)
+    .links(network.links)
+    .start();
+  var link = svg.selectAll(".link")
+      .data(network.links)
+  link.enter().append("line")
+      .attr("class", "link")
+    .style("stroke-width", function(d) { return Math.sqrt(d.weight); });
+  var node = svg.selectAll(".node")
+      .data(network.nodes)
+  node.enter().append("g")
+      .attr("class", "node")
+      .call(force.drag);
+  node.append("circle")
+    .attr("r","6");
+  node.append("text")
+    .attr("dx", 6)
+    .attr("dy", ".35em")
+    .text(function(d) { return d.id });
+  force.on("tick", function() {
+    link.attr("x1", function(d) { return d.source.x; })
+      .attr("y1", function(d) { return d.source.y; })
+      .attr("x2", function(d) { return d.target.x; })
+      .attr("y2", function(d) { return d.target.y; });
+    node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+  });
+
+//  network["lookup"] = scientist.map(function(sc){if (/\d+/.test(sc["Elsevier AuthID"])){return {sc["Elsevier AuthID"]:sc["First Name"] + " " + sc["Last Name"]};}});
+  Object.keys(contributors).forEach(function(id){
+    Object.keys(contributors[id]).forEach(function(paper_id){
+      contributors[id][paper_id].forEach(function(auth){
+        Object.keys(author_lookup).forEach(function(coauth_id){
+          if (id != coauth_id) {
+            author_lookup[coauth_id].forEach(function(coauth){
+              var rgx_coauth = new RegExp(coauth);
+//              if (rgx_coauth.test(auth)) {
+                if (auth === coauth) {
+//..        var this_link = {"source":NYU_CDS.indexOf(auth_id),"target":NYU_CDS.indexOf(id),"weight":1};
+                var source_index = network.nodes.indexOf(network.nodes.filter(function(d){ return d.id === id; })[0]);
+                var target_index = network.nodes.indexOf(network.nodes.filter(function(d){ return d.id === coauth_id; })[0]);
+                var this_link = {"source":source_index,"target":target_index,"weight":1};
+                network["links"].push(this_link);
+
+                force
+                  .nodes(network.nodes)
+                  .links(network.links)
+                  .start();
+                link = svg.selectAll(".link")
+                  .data(network.links)
+                link.enter().append("line")
+                  .attr("class", "link")
+                  .style("stroke-width", function(d) { return Math.sqrt(d.weight); });
+                force.on("tick", function() {
+//          link.transition().duration(1000);
+                  link.attr("x1", function(d) { return d.source.x; })
+                    .attr("y1", function(d) { return d.source.y; })
+                    .attr("x2", function(d) { return d.target.x; })
+                    .attr("y2", function(d) { return d.target.y; });
+//          node.transition().duration(1000);
+                  node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+                });
+
+              }
+            })
+          }
+        })
+      })
+    })
+  })
+  console.log(network);
+
+});
+
+
+
+</script>
+</body>
