@@ -127,41 +127,26 @@ var fill = d3.scale.category20c();
 var force = d3.layout.force()
     .charge(-120)
     .linkDistance(30)
-    .size([width, height]);
+    .size([width, height])
+    .on("tick",tick);
 var svg = d3.select("body").append("svg")
     .attr("width", width)
     .attr("height", height);
-node = svg.selectAll(".node").data(network["nodes"]).enter()
-link = svg.selectAll(".link").data(network.links).enter()
+node = svg.selectAll(".node").data(network["nodes"])
+link = svg.selectAll(".link").data(network.links)
 
 d3.csv("./data/nyu-data-arxiv.csv", function(scientists) {
   var authors = d3.set(scientists.map(function(row){return row["First Name"] + "_" + row["Last Name"]})).values().map(function(au){return au.split(/_/);});
 //  console.log(authors);
   var external_coauthors = {};
+  var index = 0;
 
   authors.forEach(function(au){
     var this_node = {"group":"NYU","id":au[0]+"_"+au[1],"name":au[0]+" "+au[1], "inst":"NYU"}
     network["nodes"].push(this_node);
-    force
-      .nodes(network["nodes"])
-      .start(); 
-    node = svg.selectAll(".node")
-          .data(network.nodes)
-        .enter().append("g")
-          .attr("class","node") 
-          .attr("id",function(d){return "_" + d.id;})
-          .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
-          .call(force.drag);
-    node.append("circle")
-      .attr("r","4")
-      .style("fill","white")
-      .style("stroke","black")
-    node.append("text")
-      .attr("dx", 5)
-      .attr("dy", ".35em")
-      .text(function(d) { return d.name });
-    force
-      .on("tick",tick);
+    setTimeout(insertNode(network["nodes"]),index*1000);
+    console.log(index);
+    index++;
   });
 });
 
@@ -203,9 +188,10 @@ d3.csv("./data/nyu-data-arxiv.csv", function(scientists) {
               .attr("class", "link")
             link.exit();
             node = svg.selectAll(".node")
-              .data(network.nodes)
+              .data(network.nodes);
             node.enter().append("node")
               .attr("class", "node")
+              .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
             node.exit();
             force.on("tick", tick).start();
           }
@@ -243,6 +229,35 @@ d3.csv("./data/nyu-data-arxiv.csv", function(scientists) {
     });
   });
 });
+
+function insertNode(nodes) {
+  force
+    .nodes(nodes)
+    .start();
+  node = svg.selectAll(".node")
+      .data(nodes)
+    .enter().append("g")
+      .attr("class","node") 
+      .attr("id",function(d){return "_" + d.id;})
+      .call(force.drag)
+  node.append("circle")
+    .attr("r","4")
+    .style("fill","white")
+    .style("stroke","black")
+  node.append("text")
+    .attr("dx", 5)
+    .attr("dy", ".35em")
+    .text(function(d) { return d.name });
+  svg.selectAll(".node")
+      .attr("transform", function(d) { console.log(d);return "translate(" + d.x + "," + d.y + ")"; });
+//  force
+//    .nodes(nodes)
+//        .on("tick", tick)
+//    .start(); 
+//    start();
+//    force
+
+}
 
 function tick(e) {
   // Push different nodes in different directions for clustering.
