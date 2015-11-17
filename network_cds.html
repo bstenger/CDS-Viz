@@ -168,7 +168,7 @@ d3.csv("./data/data-scientists.csv", function(scientist) {
 
   for (var i = 0; i < NYU_CDS.length; i++) {
 
-    d3.json("https://api.elsevier.com/content/author/eid/" + NYU_CDS[i] + "?insttoken=643f5557efad323a4cbc87ecdf059e92&apiKey=e2f267b7ed10a433dcb8856663ec3e71&httpAccept=application/json", function(error,author_query) {
+    d3.json("https://api.elsevier.com/content/author/eid/" + NYU_CDS[i] + "?insttoken=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&apiKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&httpAccept=application/json", function(error,author_query) {
 
       var author_id = author_query["author-retrieval-response"][0]["coredata"]["dc:identifier"].split(":")[1];
       console.log(author_id);
@@ -192,7 +192,7 @@ d3.csv("./data/data-scientists.csv", function(scientist) {
         .on("tick",tick);
     });
 
-    d3.json("https://api.elsevier.com/content/search/author?insttoken=643f5557efad323a4cbc87ecdf059e92&apiKey=e2f267b7ed10a433dcb8856663ec3e71&co-author="+ NYU_CDS[i] +"&start=0&count=180&query=au-id(nil)", function(error, coauthor_query) {
+    d3.json("https://api.elsevier.com/content/search/author?insttoken=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&apiKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&co-author="+ NYU_CDS[i] +"&start=0&count=180&query=au-id(nil)", function(error, coauthor_query) {
 
       var coauth_id_array = coauthor_query["search-results"]["entry"].map(function(e){return parseInt(e["dc:identifier"].split(":")[1]) });
       var url = coauthor_query["search-results"]["link"][0]["@href"];
@@ -212,7 +212,7 @@ d3.csv("./data/data-scientists.csv", function(scientist) {
             .attr("class", "link")
             .style("stroke-width", function(d) { return Math.sqrt(d.weight); });
           force.on("tick", tick);
-          d3.json("https://api.elsevier.com/content/search/scopus?insttoken=643f5557efad323a4cbc87ecdf059e92&apiKey=e2f267b7ed10a433dcb8856663ec3e71&query=au-id("+auth_id+")+AND+au-id("+id+")", function(error,link_query) {
+          d3.json("https://api.elsevier.com/content/search/scopus?insttoken=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&apiKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&query=au-id("+auth_id+")+AND+au-id("+id+")", function(error,link_query) {
             var weight = parseInt(link_query["search-results"]["opensearch:totalResults"]);
             url = link_query["search-results"]["link"][0]["@href"]
             var ids = url.match(/au-id\%28(\d+)\%29\+AND\+au-id\%28(\d+)\%29/);
