@@ -35,7 +35,7 @@ fill:#555;
 <script>
 
 var network = {"nodes":[],"links":[],"lookup":{} };
-var node,link;
+var node,link, authors, scientists;
 
 var subjects_lookup = { //.. change to arXiv
   "AGRI":"Agricultural/Biological Sciences", //..med 1 BLUE #0078A8
@@ -125,110 +125,195 @@ var fill = d3.scale.category20c();
 //    .size([width, height])
 //    .start();
 var force = d3.layout.force()
-    .charge(-120)
-    .linkDistance(30)
+    .nodes(network.nodes)
+    .links(network.links)
+    .charge(-100)
+    .linkDistance(100)
     .size([width, height])
-    .on("tick",tick);
+    .on("tick",tick)
 var svg = d3.select("body").append("svg")
     .attr("width", width)
     .attr("height", height);
-node = svg.selectAll(".node").data(network["nodes"])
-link = svg.selectAll(".link").data(network.links)
+node = svg.selectAll(".node").data(network["nodes"]);
+link = svg.selectAll(".link").data(network.links);
 
-d3.csv("./data/nyu-data-arxiv.csv", function(scientists) {
-  var authors = d3.set(scientists.map(function(row){return row["First Name"] + "_" + row["Last Name"]})).values().map(function(au){return au.split(/_/);});
-//  console.log(authors);
-  var external_coauthors = {};
-  var index = 0;
+d3.csv("./data/nyu-data-arxiv.csv", function(rows) {
+  scientists = rows;
+  authors = d3.set(rows.map(function(row){return row["First Name"] + "_" + row["Last Name"]})).values().map(function(au){return au.split(/_/);});
+  network.nodes = authors.map(function(au){return {"group":"NYU", "id":au.join('').replace(/\W/g,''), "name":au.join(' '), "first":au[0], "last":au[1], "inst":"NYU"};})
+  force.nodes(network.nodes);
+  force.on("tick", tick).start();
+  node = node.data(force.nodes(), function(d){return d.id;})
+  node.enter().append("g")
+      .attr("class","node") 
+      .attr("id",function(d){return d.id;})
+      .call(force.drag);
+  node.append("circle")
+    .attr("r","4")
+    .style("fill","white")
+    .style("stroke","black")
+  node.append("text")
+    .attr("dx", 5)
+    .attr("dy", ".35em")
+    .text(function(d) { return d.name });
 
-  authors.forEach(function(au){
-    var this_node = {"group":"NYU","id":au[0]+"_"+au[1],"name":au[0]+" "+au[1], "inst":"NYU"}
-    network["nodes"].push(this_node);
-    setTimeout(insertNode(network["nodes"]),index*1000);
-    console.log(index);
-    index++;
-  });
+  setTimeout(function(){
+    svg.selectAll(".node").each(function(author){
+//    setTimeout(function(){
+//    var this_link = {"source":Math.floor(Math.random()*network.nodes.length), "target":Math.floor(Math.random()*network.nodes.length)};
+//    network.links.push(this_link);
+//    force
+//      .nodes(network.nodes)
+//      .links(network.links)
+//      .start();
+//    link = link.data(force.links())
+//    link.enter().insert("line").attr("class", "link");
+//  }, d.index*1000)
+//    papers2links(d, scientists, network);
+      var papers_list = scientists.filter(function(row){return row["First Name"].match(author.first) && row["Last Name"].match(author.last); });
+      console.log("papers: " + papers_list.length);
+      papers_list.forEach(function(row){
+        var rgx_paper = new RegExp(row["Arxiv_id"]);
+        var how_many = scientists.filter(function(row){return rgx_paper.test(row["Arxiv_id"]);}).length;
+        if (how_many > 1) {
+          setTimeout(function(){
+            var row_coauthors = d3.keys(row).filter(function(col){return /Contributor/.test(col) && /\w+/.test(row[col])}).map(function(contrib){return row[contrib];});
+            console.log("COAUTHORS: " + row_coauthors.join(", "));
+            console.log("PAPER: " + row["Arxiv_id"] + " ... AUTHOR: " + author.name);
+            var rgx_source = new RegExp(row["First Name"].replace(/\W/g,'') + row["Last Name"].replace(/\W/g,''));
+            var source_obj = network.nodes.filter(function(d){return rgx_source.test(d.id);});
+            var source_index = source_obj[0].index;
+            row_coauthors.forEach(function(coauthor){
+              network.nodes.forEach(function(check_author){
+                var rgx_firstname = new RegExp(check_author.first);
+                var rgx_firstinitial = new RegExp("^"+check_author.first.substring(0,1)+".");
+                var rgx_lastname = new RegExp(check_author.last);
+                var rgx_target = new RegExp(check_author.id);
+                var target_obj = network.nodes.filter(function(d){return rgx_target.test(d.id);});
+                var target_index = target_obj[0].index;
+                if (rgx_firstname.test(coauthor) && rgx_lastname.test(coauthor) && (!rgx_lastname.test(author.name))) {
+                  console.log("\t FULL NAME PAIR: " + author.name + " ... " + check_author.name);
+                  var this_link = {"source":source_index,"target":target_index,"weight":1};
+                  var check_link = network.links.filter(function(d){return ((d.source.index === source_index && d.target.index === target_index) || (d.source.index === target_index && d.target.index === source_index))})
+                  if (check_link.length === 0) {
+                    network.links.push(this_link);
+                    force.nodes(network.nodes)
+                    force.links(network.links)
+                    force.on("tick",tick).start();
+                    link = link.data(force.links())
+                    link.enter().insert("line").attr("class", "link");
+                  }
+                } else if (rgx_firstinitial.test(coauthor) && rgx_lastname.test(coauthor) && (!rgx_lastname.test(author.name))) {
+                  console.log("\t FIRST INITIAL PAIR: " + author.name + " ... " + check_author.name);
+                  var this_link = {"source":source_index,"target":target_index,"weight":1};
+                  var check_link = network.links.filter(function(d){return ((d.source.index === source_index && d.target.index === target_index) || (d.source.index === target_index && d.target.index === source_index))})
+                  if (check_link.length === 0 && how_many > 1) {
+                    network.links.push(this_link);
+                    force.nodes(network.nodes)
+                    force.links(network.links)
+                    force.on("tick",tick).start();
+                    link = link.data(force.links())
+                    link.enter().insert("line").attr("class", "link");
+                  }
+                } 
+              });
+            });
+          },2000)
+        }
+      });
+    });
+  }, 1000);
 });
 
-d3.csv("./data/nyu-data-arxiv.csv", function(scientists) {
-  var authors = d3.set(scientists.map(function(row){return row["First Name"] + "_" + row["Last Name"]})).values().map(function(au){return au.split(/_/);});
+function papers2links(author, scientists, network) {
+  var rgx_firstname = new RegExp(author.first);
+  var rgx_firstinitial = new RegExp("^"+author.first.substring(0,1)+".");
+  var rgx_lastname = new RegExp(author.last);
+  var rgx_target = new RegExp(author.id);
+  var target_obj = network.nodes.filter(function(d){return rgx_target.test(d.id);});
+  var target_index = target_obj[0].index;
+  console.log(target_obj);
+  console.log(target_index);
   scientists.forEach(function(row){
     var paper = row["Arxiv_id"];
     var rgx_paper = new RegExp(paper);
     var row_coauthors = d3.keys(row).filter(function(col){return /Contributor/.test(col) && /\w+/.test(row[col])}).map(function(contrib){return row[contrib];});
     var how_many = scientists.filter(function(row){return rgx_paper.test(row["Arxiv_id"]);}).length;
-    row_coauthors.forEach(function(coauthor){
-      authors.forEach(function(au){
-        var rgx_firstname = new RegExp(au[0]);
-        var rgx_firstinitial = new RegExp("^"+au[0].substring(0,1)+".");
-        var rgx_lastname = new RegExp(au[1]);
-        var rgx_source = new RegExp(row["First Name"]+"_"+row["Last Name"]);
-        var rgx_target = new RegExp(au[0]+"_"+au[1]);
-//        if (coauthor.match(author[0]) && coauthor.match(author[1])) {
+    setTimeout(function(){
+      row_coauthors.forEach(function(coauthor){
+        var rgx_source = new RegExp(row["First Name"].replace(/\W/g,'') + row["Last Name"].replace(/\W/g,''));
+        var source_obj = network.nodes.filter(function(d){return rgx_source.test(d.id);});
+        var source_index = source_obj[0].index;
         if (rgx_firstname.test(coauthor) && rgx_lastname.test(coauthor) && (!(rgx_lastname.test(row["Last Name"])))) {
-          console.log("COAUTHOR: " + au[0] + " " + au[1] + " ... " + "AUTHOR: " + row["First Name"] + " " + row["Last Name"]);
-          var source_obj = network["nodes"].filter(function(d){return rgx_source.test(d["id"]);});
-          var source_index = source_obj[0].index;
-          var target_obj = network["nodes"].filter(function(d){return rgx_target.test(d["id"]);})
-          var target_index = target_obj[0].index;
-          var this_link = {"source":network["nodes"].indexOf(source_obj[0]),"target":network["nodes"].indexOf(target_obj[0]),"weight":1};
-          var links_index_pairs = network["links"].map(function(link){return ((link.source.index*link.source.index) + (link.target.index*link.target.index));});
-          console.log(paper + " ... how_many: " + how_many);
+          console.log("COAUTHOR: " + author.name + " ... " + "AUTHOR: " + row["First Name"] + " " + row["Last Name"]);
+          var this_link = {"source":network.nodes.indexOf(source_obj[0]),"target":network.nodes.indexOf(target_obj[0]),"weight":1};
+          var check_link = network.links.filter(function(d){return ((d.source.index === source_index && d.target.index === target_index) || (d.source.index === target_index && d.target.index === source_index))})
+          console.log(paper + " ... how_many: " + how_many + " ... check: " + check_link.length);
           console.log(row_coauthors.join(", "))
-          if (links_index_pairs.indexOf((source_index*source_index) + (target_index*target_index)) < 0 && how_many === 2) {
-            network["links"].push(this_link);
-            console.log(network);
+          if (check_link.length === 0 && how_many === 2) {
+            network.links.push(this_link);
             force
               .nodes(network.nodes)
               .links(network.links)
               .start();
-            link = svg.selectAll(".link")
-              .data(network.links)
-            link.enter().append("line")
-              .attr("class", "link")
-            link.exit();
-            node = svg.selectAll(".node")
-              .data(network.nodes);
-            node.enter().append("node")
-              .attr("class", "node")
-              .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
-            node.exit();
-            force.on("tick", tick).start();
+            link = link.data(force.links())
+            link.enter().insert("line").attr("class", "link");
           }
-//          if (network["links"].indexOf(this_link) < 0 && network["links"].indexOf(alt_link) < 0 && network["links"].length < 8) {
-//          }
         } else if (rgx_firstinitial.test(coauthor) && rgx_lastname.test(coauthor) && (!(rgx_lastname.test(row["Last Name"])))) {
-          console.log("COAUTHOR: " + au[0] + " " + au[1] + " ... " + "AUTHOR: " + row["First Name"] + " " + row["Last Name"]);
-          var source_obj = network["nodes"].filter(function(d){return rgx_source.test(d["id"]);});
-          var source_index = source_obj[0].index;
-          var target_obj = network["nodes"].filter(function(d){return rgx_target.test(d["id"]);})
-          var target_index = target_obj[0].index;
-          var this_link = {"source":network["nodes"].indexOf(source_obj[0]),"target":network["nodes"].indexOf(target_obj[0]),"weight":1};
-          var links_index_pairs = network["links"].map(function(link){return ((link.source.index*link.source.index) + (link.target.index*link.target.index));});
-          console.log(paper + " ... how_many: " + how_many);
-          console.log(row_coauthors.join(", "))
-          if (links_index_pairs.indexOf((source_index*source_index) + (target_index*target_index)) < 0 && how_many === 2) {
-            network["links"].push(this_link);
-            console.log(network);
+          console.log("COAUTHOR: " + author.name + " ... " + "AUTHOR: " + row["First Name"] + " " + row["Last Name"]);
+          var this_link = {"source":network.nodes.indexOf(source_obj[0]),"target":network.nodes.indexOf(target_obj[0]),"weight":1};          
+          var check_link = network.links.filter(function(d){return ((d.source.index === source_index && d.target.index === target_index) || (d.source.index === target_index && d.target.index === source_index))})
+          console.log(paper + " ... how_many: " + how_many + " ... check: " + check_link.length);
+          console.log(row_coauthors.join(", "));
+          if (check_link.length === 0 && how_many === 2) {
+            network.links.push(this_link);
             force
               .nodes(network.nodes)
               .links(network.links)
               .start();
-            link = svg.selectAll(".link")
-              .data(network.links)
-            link.enter().append("line")
-              .attr("class", "link")
-            node = svg.selectAll(".node")
-              .data(network.nodes)
-            node.enter().append("node")
-              .attr("class", "node")
-            force.on("tick", tick).start();
+            link = link.data(force.links())
+            link.enter().insert("line").attr("class", "link");
           }
         }
       });
-    });
+    }, author.index*1000);
   });
-});
+}
+
+function update_links(data) {
+  var link = svg.selectAll(".link")
+    .data(data)
+  link.enter().append("line")
+    .attr("class", "link")
+  node = svg.selectAll(".node")
+    .data(network.nodes);
+  node.enter().append("node")
+    .attr("class", "node")
+    .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+}
+
+function update_nodes(data) {
+  node = svg.selectAll(".node")
+      .data(data)
+  node.enter().append("g")
+      .attr("class","node") 
+      .attr("id",function(d){return d.id;})
+//      .attr("transform", function(d) { console.log(d); return "translate(" + d.x + "," + d.y + ")"; })
+      .call(force.drag);
+  node.append("circle")
+    .attr("r","4")
+    .style("fill","white")
+    .style("stroke","black")
+  node.append("text")
+    .attr("dx", 5)
+    .attr("dy", ".35em")
+    .text(function(d) { return d.name });
+  node.exit().remove();
+  console.log(node);
+//  node.exit().remove();
+}
+
+
 
 function insertNode(nodes) {
   force
@@ -239,7 +324,8 @@ function insertNode(nodes) {
     .enter().append("g")
       .attr("class","node") 
       .attr("id",function(d){return "_" + d.id;})
-      .call(force.drag)
+      .attr("transform", function(d) { console.log(d);return "translate(" + Math.floor(Math.random() * height) + "," + Math.floor(Math.random() * width) + ")"; })
+      .call(force.drag);
   node.append("circle")
     .attr("r","4")
     .style("fill","white")
@@ -249,6 +335,7 @@ function insertNode(nodes) {
     .attr("dy", ".35em")
     .text(function(d) { return d.name });
   svg.selectAll(".node")
+      .transition().duration(1000)
       .attr("transform", function(d) { console.log(d);return "translate(" + d.x + "," + d.y + ")"; });
 //  force
 //    .nodes(nodes)
