@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  font: 10px sans-serif;
+}
+
+.link {
+  stroke: #aaa;
+}
+
+.node text {
+cursos:pointer;
+}
+
+.node circle{
+stroke:#fff;
+stroke-width:1px;
+fill:#555;
+}
+
+.circle {
+  width: 12px;
+  height: 12px;
+  -moz-border-radius: 6px;
+  -webkit-border-radius: 6px;
+  border-radius: 6px;
+  border: 1px solid black;
+}
+
+</style>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+<script>
+
+var network = {"nodes":[],"links":[],"lookup":{} };
+var node,link, authors, authors_array, scientists;
+
+var subjects_lookup = { //.. change to arXiv
+  "AGRI":"Agricultural/Biological Sciences", //..med 1 BLUE #0078A8
+  "BIOC":"Biochemistry", //..med 2 #1682ED
+  "DENT":"Dentistry", //..med 3 8EB6C9
+  "HEAL":"Health Professions", //..med 4 #7DA1BA
+  "MEDI":"Medicine", //..med 5 #6C8CAA
+  "NEUR":"Neuroscience", //..med 6 #5B789B
+  "NURS":"Nursing", //..med 7 #4A638C
+  "PHAR":"Pharmacology/Toxicology", //..med 8 #394E7C
+  "IMMU":"Immunology/Microbiology", //..med 9 #28396D
+  "VETE":"Veterinary", //..med 10 #17255E
+  "ARTS":"Arts/Humanities", //..soc 1 BROWN #4C3B00
+  "PSYC":"Psychology", //..soc 2 #7F6E33
+  "SOCI":"Social Sciences", //..soc 3 #B28A00
+  "BUSI":"Business", //..biz 1 PURPLE #B28A00
+  "ECON":"Economics", //..biz 2 #714BB9
+  "CENG":"Chemical Engineering", //..chem 1 RED #8C260D
+  "CHEM":"Chemistry", //..chem 2 #A53833
+  "ENVI":"Environmental Science", //..chem 3 #BF4A5A
+  "ENER":"Energy", //..chem 4 #D85C81
+  "MATE":"Materials Science", //..chem 5 #F26EA8
+  "COMP":"Computer Science", //..cs 1 GREEN #98EA53
+  "DECI":"Decision Sciences", //..cs 2 #5CA745
+  "MATH":"Mathematics", //..cs 3 #316430
+  "EART":"Earth/Planetary Sciences", //..astr 1 #F6961B
+  "PHYS":"Physics/Astronomy", //..astr 2 #F46601
+  "ENGI":"Engineering", //..engr 0 YELLOW #DDF835
+  "MULT":"Multidisciplinary", //..mult 0 GRAY #333333
+  "EXTERNAL":"Non-CDS",
+  "NYU":"NYU"
+}
+var subjects_colors = {
+  "AGRI":"#0078A8",
+  "BIOC":"#1682ED",
+  "DENT":"#8EB6C9",
+  "HEAL":"#7DA1BA",
+  "MEDI":"#6C8CAA",
+  "NEUR":"#5B789B",
+  "NURS":"#4A638C",
+  "PHAR":"#394E7C",
+  "IMMU":"#28396D",
+  "VETE":"#17255E",
+  "ARTS":"#4C3B00",
+  "PSYC":"#7F6E33",
+  "SOCI":"#B28A00",
+  "BUSI":"#6EEDD6",
+  "ECON":"#714BB9",
+  "CENG":"#8C260D",
+  "CHEM":"#A53833",
+  "ENVI":"#BF4A5A",
+  "ENER":"#D85C81",
+  "MATE":"#F26EA8",
+  "COMP":"#98EA53",
+  "DECI":"#5CA745",
+  "MATH":"#316430",
+  "EART":"#F6961B",
+  "PHYS":"#F46601",
+  "ENGI":"#DDF835",
+  "MULT":"#333333",
+  "EXTERNAL":"#ffffff",
+  "NYU":"purple"
+}
+var abbreviations = Object.keys(subjects_lookup);
+var subject2key = [];
+var id2name = {};
+for (var i = 0; i < 2; i++) {
+  subject2key[i] = [];
+  for (var j = 0; j < 13; j++) {
+    subject2key[i][j] = (13*i)+j
+  }
+}
+var external_coauthors = [];
+var external_coauthors_lookup = {}; 
+var width = 1200,
+    height = 800;
+var fill = d3.scale.category20c();
+var force = d3.layout.force()
+    .nodes(network.nodes)
+    .links(network.links)
+    .charge(-100)
+    .linkDistance(100)
+    .size([width, height])
+    .on("tick",tick)
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+node = svg.selectAll(".node").data(network["nodes"]);
+link = svg.selectAll(".link").data(network.links);
+var rgx_external = new RegExp("^[A-Z][a-z]");
+
+d3.csv("./data/nyu-data-arxiv.csv", function(rows) {
+  scientists = rows;
+  authors = d3.set(rows.map(function(row){return row["First Name"] + "_" + row["Last Name"]})).values().map(function(au){return au.split(/_/);});
+  authors_array = authors.map(function(au){return au.join(" ");});
+  network.nodes = authors.map(function(au){return {"group":"NYU", "id":au.join('').replace(/\W/g,''), "name":au.join(' '), "first":au[0], "last":au[1], "inst":"NYU"};})
+  force.nodes(network.nodes);
+  force.on("tick", tick).start();
+  node = node.data(force.nodes(), function(d){return d.id;})
+  node.enter().append("g")
+      .attr("class","node") 
+      .attr("id",function(d){return d.id;})
+      .call(force.drag);
+  node.append("circle")
+    .attr("r","4")
+    .style("fill","white")
+    .style("stroke","black")
+  node.append("text")
+    .attr("dx", 5)
+    .attr("dy", ".35em")
+    .text(function(d) { return d.name });
+
+  setTimeout(function(){
+    svg.selectAll(".node").each(function(author){
+      var papers_list = scientists.filter(function(row){return row["First Name"].match(author.first) && row["Last Name"].match(author.last); });
+      console.log("papers: " + papers_list.length);
+      papers_list.forEach(function(row){
+        var rgx_paper = new RegExp(row["Arxiv_id"]);
+        var how_many = scientists.filter(function(row){return rgx_paper.test(row["Arxiv_id"]);}).length;
+        var row_coauthors = d3.keys(row).filter(function(col){return /Contributor/.test(col) && /\w+/.test(row[col])}).map(function(contrib){return row[contrib];});
+        if (how_many > 1) {
+          setTimeout(function(){
+            console.log("COAUTHORS: " + row_coauthors.join(", "));
+            console.log("PAPER: " + row["Arxiv_id"] + " ... AUTHOR: " + author.name);
+            var rgx_source = new RegExp(row["First Name"].replace(/\W/g,'') + row["Last Name"].replace(/\W/g,''));
+            var source_obj = network.nodes.filter(function(d){return rgx_source.test(d.id);});
+            var source_index = source_obj[0].index;
+            row_coauthors.forEach(function(coauthor){
+              network.nodes.forEach(function(check_author){
+                var rgx_firstname = new RegExp(check_author.first);
+                var rgx_firstinitial = new RegExp("^"+check_author.first.substring(0,1)+".");
+                var rgx_lastname = new RegExp(check_author.last);
+                var rgx_target = new RegExp(check_author.id);
+                var target_obj = network.nodes.filter(function(d){return rgx_target.test(d.id);});
+                var target_index = target_obj[0].index;
+                if (rgx_firstname.test(coauthor) && rgx_lastname.test(coauthor) && (!rgx_lastname.test(author.name))) {
+                  console.log("\t FULL NAME PAIR: " + author.name + " ... " + check_author.name);
+                  var this_link = {"source":source_index,"target":target_index,"weight":1};
+                  var check_link = network.links.filter(function(d){return ((d.source.index === source_index && d.target.index === target_index) || (d.source.index === target_index && d.target.index === source_index))})
+                  if (check_link.length === 0) {
+                    network.links.push(this_link);
+                    force.nodes(network.nodes)
+                    force.links(network.links)
+                    force.on("tick",tick).start();
+                    link = link.data(force.links())
+                    link.enter().insert("line").attr("class", "link");
+                  }
+                } else if (rgx_firstinitial.test(coauthor) && rgx_lastname.test(coauthor) && (!rgx_lastname.test(author.name))) {
+                  console.log("\t FIRST INITIAL PAIR: " + author.name + " ... " + check_author.name);
+                  var this_link = {"source":source_index,"target":target_index,"weight":1};
+                  var check_link = network.links.filter(function(d){return ((d.source.index === source_index && d.target.index === target_index) || (d.source.index === target_index && d.target.index === source_index))})
+                  if (check_link.length === 0 && how_many > 1) {
+                    network.links.push(this_link);
+                    force.nodes(network.nodes)
+                    force.links(network.links)
+                    force.on("tick",tick).start();
+                    link = link.data(force.links())
+                    link.enter().insert("line").attr("class", "link");
+                  }
+                } else if (rgx_external.test(coauthor) && external_coauthors.length < 99 && external_coauthors.indexOf(coauthor) < 0) {
+                  coauthor = coauthor.replace(/\s+[A-Z].\s+/, " ");
+//                  console.log(authors_array);
+                  if (authors_array.indexOf(coauthor) < 0) {
+                    if (external_coauthors.indexOf(coauthor) < 0 ) {
+                      external_coauthors.push(coauthor);
+                      console.log("(" + author.name + ", " + coauthor + ") ... EXTERNAL: " + external_coauthors.join(", "));
+                    } else {
+                      console.log("ADD Node/Link: " + coauthor + "/" + author.name);
+                    }
+                  }
+                }
+              });
+            });
+          },3000)
+        } else {
+//          row_coauthors.forEach(function(coauthor){
+//            network.nodes.forEach(function(check_author){
+//              var rgx_firstname = new RegExp(check_author.first);
+//              var rgx_firstinitial = new RegExp("^"+check_author.first.substring(0,1)+".");
+//              var rgx_lastname = new RegExp(check_author.last);
+//              var rgx_target = new RegExp(check_author.id);
+//              var target_obj = network.nodes.filter(function(d){return rgx_target.test(d.id);});
+//              var target_index = target_obj[0].index;
+//              if (rgx_external.test(coauthor) && external_coauthors.length < 99 && (!rgx_lastname.test(author.name)) && external_coauthors.indexOf(coauthor) >= 0 ) {
+//                external_coauthors.push(coauthor);
+//                console.log("EXTERNAL: " + external_coauthors.join(", "));
+//              }
+//            });
+//          });
+        }
+      });
+    });
+  }, 1000);
+});
+
+function papers2links(author, scientists, network) {
+  var rgx_firstname = new RegExp(author.first);
+  var rgx_firstinitial = new RegExp("^"+author.first.substring(0,1)+".");
+  var rgx_lastname = new RegExp(author.last);
+  var rgx_target = new RegExp(author.id);
+  var target_obj = network.nodes.filter(function(d){return rgx_target.test(d.id);});
+  var target_index = target_obj[0].index;
+  console.log(target_obj);
+  console.log(target_index);
+  scientists.forEach(function(row){
+    var paper = row["Arxiv_id"];
+    var rgx_paper = new RegExp(paper);
+    var row_coauthors = d3.keys(row).filter(function(col){return /Contributor/.test(col) && /\w+/.test(row[col])}).map(function(contrib){return row[contrib];});
+    var how_many = scientists.filter(function(row){return rgx_paper.test(row["Arxiv_id"]);}).length;
+    setTimeout(function(){
+      row_coauthors.forEach(function(coauthor){
+        var rgx_source = new RegExp(row["First Name"].replace(/\W/g,'') + row["Last Name"].replace(/\W/g,''));
+        var source_obj = network.nodes.filter(function(d){return rgx_source.test(d.id);});
+        var source_index = source_obj[0].index;
+        if (rgx_firstname.test(coauthor) && rgx_lastname.test(coauthor) && (!(rgx_lastname.test(row["Last Name"])))) {
+          console.log("COAUTHOR: " + author.name + " ... " + "AUTHOR: " + row["First Name"] + " " + row["Last Name"]);
+          var this_link = {"source":network.nodes.indexOf(source_obj[0]),"target":network.nodes.indexOf(target_obj[0]),"weight":1};
+          var check_link = network.links.filter(function(d){return ((d.source.index === source_index && d.target.index === target_index) || (d.source.index === target_index && d.target.index === source_index))})
+          console.log(paper + " ... how_many: " + how_many + " ... check: " + check_link.length);
+          console.log(row_coauthors.join(", "))
+          if (check_link.length === 0 && how_many === 2) {
+            network.links.push(this_link);
+            force
+              .nodes(network.nodes)
+              .links(network.links)
+              .start();
+            link = link.data(force.links())
+            link.enter().insert("line").attr("class", "link");
+          }
+        } else if (rgx_firstinitial.test(coauthor) && rgx_lastname.test(coauthor) && (!(rgx_lastname.test(row["Last Name"])))) {
+          console.log("COAUTHOR: " + author.name + " ... " + "AUTHOR: " + row["First Name"] + " " + row["Last Name"]);
+          var this_link = {"source":network.nodes.indexOf(source_obj[0]),"target":network.nodes.indexOf(target_obj[0]),"weight":1};          
+          var check_link = network.links.filter(function(d){return ((d.source.index === source_index && d.target.index === target_index) || (d.source.index === target_index && d.target.index === source_index))})
+          console.log(paper + " ... how_many: " + how_many + " ... check: " + check_link.length);
+          console.log(row_coauthors.join(", "));
+          if (check_link.length === 0 && how_many === 2) {
+            network.links.push(this_link);
+            force
+              .nodes(network.nodes)
+              .links(network.links)
+              .start();
+            link = link.data(force.links())
+            link.enter().insert("line").attr("class", "link");
+          }
+        }
+      });
+    }, author.index*1000);
+  });
+}
+
+function update_links(data) {
+  var link = svg.selectAll(".link")
+    .data(data)
+  link.enter().append("line")
+    .attr("class", "link")
+  node = svg.selectAll(".node")
+    .data(network.nodes);
+  node.enter().append("node")
+    .attr("class", "node")
+    .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+}
+
+function update_nodes(data) {
+  node = svg.selectAll(".node")
+      .data(data)
+  node.enter().append("g")
+      .attr("class","node") 
+      .attr("id",function(d){return d.id;})
+//      .attr("transform", function(d) { console.log(d); return "translate(" + d.x + "," + d.y + ")"; })
+      .call(force.drag);
+  node.append("circle")
+    .attr("r","4")
+    .style("fill","white")
+    .style("stroke","black")
+  node.append("text")
+    .attr("dx", 5)
+    .attr("dy", ".35em")
+    .text(function(d) { return d.name });
+  node.exit().remove();
+  console.log(node);
+//  node.exit().remove();
+}
+
+
+
+function insertNode(nodes) {
+  force
+    .nodes(nodes)
+    .start();
+  node = svg.selectAll(".node")
+      .data(nodes)
+    .enter().append("g")
+      .attr("class","node") 
+      .attr("id",function(d){return "_" + d.id;})
+      .attr("transform", function(d) { console.log(d);return "translate(" + Math.floor(Math.random() * height) + "," + Math.floor(Math.random() * width) + ")"; })
+      .call(force.drag);
+  node.append("circle")
+    .attr("r","4")
+    .style("fill","white")
+    .style("stroke","black")
+  node.append("text")
+    .attr("dx", 5)
+    .attr("dy", ".35em")
+    .text(function(d) { return d.name });
+  svg.selectAll(".node")
+      .transition().duration(1000)
+      .attr("transform", function(d) { console.log(d);return "translate(" + d.x + "," + d.y + ")"; });
+//  force
+//    .nodes(nodes)
+//        .on("tick", tick)
+//    .start(); 
+//    start();
+//    force
+
+}
+
+function tick(e) {
+  // Push different nodes in different directions for clustering.
+//  var k = 6 * e.alpha;
+  network.nodes.forEach(function(o, i) {
+    var k = 3 * e.alpha
+//  .attr('cx', function(d, i) { return(r * Math.cos(i * theta)); })
+//  .attr('cy', function(d, i) { return(r * Math.sin(i * theta)); });
+    var howmany = Object.keys(subjects_lookup).length;
+    var theta = 8 * Math.PI / howmany;
+    o.y += o.group & 1 ? k : -k;
+    o.x += o.group & 2 ? k : -k;
+    o.y += o.group & 3 ? k : -k;
+    o.x += o.group & 4 ? k : -k;
+    o.y += o.group & 5 ? k : -k;
+    o.x += o.group & 6 ? k : -k;
+    o.y += o.group & 7 ? k : -k;
+    o.x += o.group & 8 ? k : -k;
+//    for (var i = 1; i <= (howmany/2); i++) {
+//      if (i % 2 === 0) {
+//        o.x += o.group & i ? k : -k;
+//      } else {
+//        o.y += o.group & i ? k : -k;
+//      }
+//    }
+//    o.y += o.group & 1 ? k : -k;
+//    o.x += o.group & 2 ? k : -k;
+//    o.y += i & 1 ? k : -k;
+//    o.x += i & 2 ? k : -k;
+  });
+  node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+  link
+    .attr("x1", function(d) { return d.source.x; })
+    .attr("y1", function(d) { return d.source.y; })
+    .attr("x2", function(d) { return d.target.x; })
+    .attr("y2", function(d) { return d.target.y; });
+
+}
+
+function mousedown() {
+  nodes.forEach(function(o, i) {
+    o.x += (Math.random() - .5) * 40;
+    o.y += (Math.random() - .5) * 40;
+  });
+  force.resume();
+}
+
+</script>
+</body>
+</html>
