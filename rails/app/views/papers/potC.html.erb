@@ -1,0 +1,25 @@
+<table>
+<% @arxiv_papers.each_with_index do |arxiv,i| %>
+	<tr class="test" id="<%= @coauthors_string[i] %>"><td colspan=2><%= arxiv.map{|a| a['entry']['title']} %></td></tr>
+	<tr>
+		<td colspan=2>
+			<b>Co-Authors: <%= @coauthors_string[i] %></b>
+			<hr/>
+		</td>
+	</tr>
+	<tr class="pairs" id="<%= @coauthors_string[i] %>">
+		<%= render :partial => "potC_pairs", :locals => {coauthors: @coauthors_string[i], matches: @matches[i]} %>
+	</tr> 
+	<tr class="form" id="<%= @coauthors_string[i] %>">
+		<%= render :partial => "potC_form", :locals => {arxiv: arxiv, elsevier_papers: @elsevier_papers[i], pairs: @pairs[i], index: i, coauthors: @coauthors_string[i] }%>
+	</tr>
+	<tr class="papers" id="<%= @coauthors_string[i] %>">
+		<%= render :partial => "potC_arxiv", :locals => {arxiv: arxiv, coauthors: @coauthors_string[i]} %>
+		<%= render :partial => "potC_elsevier", :locals => {elsevier_papers: @elsevier_papers[i], coauthors: @coauthors_string[i]} %>
+	</tr>
+
+
+	<tr><td colspan=2><br/><br/></td></tr>
+
+<% end %>
+</table>

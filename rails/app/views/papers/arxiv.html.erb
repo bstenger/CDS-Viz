@@ -1,0 +1,14 @@
+
+<%= @author_pair.map{|a| a.name }.join(" ... ") %>
+
+<hr/>
+
+<%= @arxiv_query %>
+
+<hr/>
+
+<%= open(@arxiv_query).read.to_s %>
+
+<hr/>
+
+<%= @arxiv_papers.entries.map{|item| item.title}.join("<br/>") %>

@@ -1,0 +1,29 @@
+ 		<%= form_for('paper', :url => papers_path, :remote => true, :html => {}) do |f| %>
+			<td class="arxiv_form" id="<%= coauthors %>">
+				<%= f.select :title, 
+					options_for_select(arxiv.each_with_index.map{|a,i| [i, a['entry']['title'], {'data-source_id' => a['entry']['id'].gsub!(/http.*?abs\//,""), 'data-pub_date' => a['entry']['published'].to_s.gsub!(/T.*Z?/,"")}]}),
+					{:include_blank => 'Select arXiv Paper Number'},
+					{:onchange => "document.getElementsByClassName('arxiv_id')[0].value = this.options[this.selectedIndex].getAttribute('data-source_id'); document.getElementsByClassName('arxiv_date')[0].value = this.options[this.selectedIndex].getAttribute('data-pub_date');"} 
+				%>
+				<%= f.hidden_field :archive, :value => 'arXiv' %>
+				<%= f.hidden_field :pub_date, :value => Date.today, :class => "arxiv_date" %>
+				<%= f.hidden_field :source_id, :value => '', :class => "arxiv_id" %>
+			</td>
+			<td class="elsevier_form" id="<%= coauthors %>">
+				<%= fields_for 'paper[matchedPaper]' do |ff| %>
+					<%= ff.select :title, 
+						options_for_select(elsevier_papers.each_with_index.map{|paper,j| [j, paper["dc:title"],{'data-source_id' => paper["eid"], 'data-pub_date' => paper["prism:coverDate"]}]}),
+						{:include_blank => 'Select Elsevier Paper Numer'},
+						{:onchange => "document.getElementsByClassName('elsevier_id')[0].value = this.options[this.selectedIndex].getAttribute('data-source_id'); document.getElementsByClassName('elsevier_date')[0].value = this.options[this.selectedIndex].getAttribute('data-pub_date');"} %>
+					<%= ff.hidden_field :archive, :value => 'Elsevier' %>
+					<%= ff.hidden_field :pub_date, :value => Date.today, :class => 'elsevier_date'%>
+					<%= ff.hidden_field :source_id, :value => '', :class => 'elsevier_id' %>
+				<% end %>
+				<%= f.hidden_field "index", :value => index %>
+				<%= f.hidden_field "arxiv", :value => arxiv.to_json %>
+				<%= f.hidden_field "elsevier", :value => elsevier_papers.to_json %>
+				<%= f.hidden_field "authors", :multiple => true, :value => pairs[0].id %>
+				<%= f.hidden_field "authors", :multiple => true, :value => pairs[1].id %>
+				<%= f.submit "Link arXiv-Elsevier Pair", :id => coauthors %>
+			</td>
+		<% end %>

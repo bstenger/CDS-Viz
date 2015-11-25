@@ -1,0 +1,6 @@
+		<td valign="top">Elsevier Paper Titles:<br/>
+			<% elsevier_papers.each_with_index do |entry,j| %>
+				<%= j.to_s %>. <%= entry["dc:title"] %> <br/>
+			<% end %>
+
+		</td>

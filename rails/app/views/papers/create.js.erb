@@ -1,0 +1,3 @@
+$('tr.test[id="<%= @coauthors_names.to_s %>"]').html('<td colspan=2><%= @arxiv_papers.to_s %></td>');
+$('tr.pairs[id="<%= @coauthors_names.to_s %>"]').html('<%= j render(:partial => "potC_pairs", :locals => {coauthors: @coauthors_names, matches: @matches}) %>');
+$('tr.form[id="<%= @coauthors_names.to_s %>"]').html('<%= j render(:partial => "potC_form", :locals => {arxiv: @arxiv_papers, elsevier_papers: @elsevier_papers, pairs: @pairs, index: params[:paper][:index], coauthors: @coauthors_names}) %>');

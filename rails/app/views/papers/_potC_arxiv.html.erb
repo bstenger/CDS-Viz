@@ -1,0 +1,5 @@
+		<td valign="top" class="arxiv_list" id="<%= coauthors %>" >arXiv Paper Titles:<br/>
+			<% arxiv.each_with_index do |a,i| %>
+				<%= i.to_s %>. <%= a['entry']['title'] %> <br/>
+			<% end %>
+		</td>
