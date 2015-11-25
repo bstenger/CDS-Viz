@@ -1,0 +1,315 @@
+
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  font: 10px sans-serif;
+}
+
+.chord {
+  fill-opacity: .67;
+}
+
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<br/><br/>
+<script>
+
+var matrix = [
+    [0]
+];
+
+var datastructure = {"authors":{},"coauthors":{}};
+var subjects = [];
+var subjects_lookup = {
+  "AGRI":"Agricultural/Biological Sciences", 
+  "ARTS":"Arts/Humanities",
+  "BIOC":"Biochemistry",
+  "BUSI":"Business",
+  "CENG":"Chemical Engineering",
+  "CHEM":"Chemistry",
+  "COMP":"Computer Science",
+  "DECI":"Decision Sciences",
+  "DENT":"Dentistry",
+  "EART":"Earth/Planetary Sciences",
+  "ECON":"Economics",
+  "ENER":"Energy",
+  "ENGI":"Engineering",
+  "ENVI":"Environmental Science",
+  "HEAL":"Health Professions",
+  "IMMU":"Immunology/Microbiology",
+  "MATE":"Materials Science",
+  "MATH":"Mathematics",
+  "MEDI":"Medicine",
+  "NEUR":"Neuroscience",
+  "NURS":"Nursing",
+  "PHAR":"Pharmacology/Toxicology",
+  "PHYS":"Physics/Astronomy",
+  "PSYC":"Psychology",
+  "SOCI":"Social Sciences",
+  "VETE":"Veterinary",
+  "MULT":"Multidisciplinary"
+}
+var num_scientists = 1;
+if (/\?\d+$/.test(window.location.href)) {
+  num_scientists = window.location.href.slice(window.location.href.indexOf('?') + 1);
+}
+
+
+d3.csv("./data/data-scientists.csv", function(scientist) {
+  //.. David,W,Hogg,david.hogg@nyu.edu,35277937900,
+  for (var i = num_scientists-1; i < num_scientists; i++) {
+    id = scientist[i]["Elsevier AuthID"];
+    console.log(i + " ... " + id)
+    if (!(id in datastructure["authors"])) {
+      datastructure["authors"][id] = {};
+      datastructure["coauthors"][id] = {};
+      datastructure["coauthors"][id]["howmany"] = 0;
+      datastructure["coauthors"][id]["start"] = 0;
+      datastructure["coauthors"][id]["count"] = 100;
+      datastructure["coauthors"][id]["id"] = id;
+      subjects.push(id);
+    }
+  }
+  console.log(Object.keys((datastructure["authors"])))
+  Object.keys(datastructure["authors"]).forEach(function(author_id) {
+
+    d3.json("https://api.elsevier.com/content/author/eid/" + author_id + "?insttoken=643f5557efad323a4cbc87ecdf059e92&apiKey=e2f267b7ed10a433dcb8856663ec3e71&httpAccept=application/json", function(error,author_query) {
+      console.log(author_query);
+      var auth_subj_array = author_query["author-retrieval-response"][0]["subject-areas"]["subject-area"].map(function(subj) { return subj["@abbrev"]});
+      var coredata_id = author_query["author-retrieval-response"][0]["coredata"]["dc:identifier"].split(":")[1];
+      for (var j = 0; j < auth_subj_array.length; j++) {
+        if (auth_subj_array[j] in datastructure["authors"][coredata_id]) {
+          datastructure["authors"][coredata_id][auth_subj_array[j]]++;
+//          matrix[0][subjects.indexOf(auth_subj_array[j]) + 1] =  datastructure["authors"][coredata_id][auth_subj_array[j]];
+        } else {
+          datastructure["authors"][coredata_id][auth_subj_array[j]] = 1;
+          subjects.push(auth_subj_array[j]);
+          matrix[0][subjects.indexOf(auth_subj_array[j]) + 1] = 1;
+          matrix.push([1]);
+          console.log(matrix);
+        }
+        if (!(auth_subj_array[j] in datastructure["coauthors"][coredata_id])) {
+          datastructure["coauthors"][coredata_id][auth_subj_array[j]] = 0;
+        }
+      }
+//      console.log(datastructure);
+
+      d3.json("https://api.elsevier.com/content/search/author?insttoken=643f5557efad323a4cbc87ecdf059e92&apiKey=e2f267b7ed10a433dcb8856663ec3e71&co-author="+coredata_id+"&start=0&count=180&query=au-id(nil)", function(error, coauthor_query) {
+
+        console.log(coauthor_query);
+        var url = coauthor_query["search-results"]["link"][0]["@href"];
+        var url_id = url.match(/co-author=(\d+)/)[1];
+        var coauth_subj_array = coauthor_query["search-results"]["entry"].map(function(author){return author["subject-area"]}).filter(function(d){return typeof(d) != "undefined"});
+        for (var k = 0; k < coauth_subj_array.length; k++) {
+          console.log(coauth_subj_array[k]);
+          if (typeof(coauth_subj_array[k]) === undefined) {
+            break;
+          }
+          for (var k_index = 0; k_index < coauth_subj_array[k].length; k_index++) {
+            var subject = coauth_subj_array[k][k_index]["@abbrev"];
+            if (subject in datastructure["coauthors"][url_id]) {
+              datastructure["coauthors"][url_id][subject]++;
+            } else {
+              datastructure["coauthors"][url_id][subject] = 1;
+            }
+            if (!(subject in datastructure["authors"][url_id])) {
+              datastructure["authors"][url_id][subject] = 0;
+              subjects.push(subject);
+              matrix[0][subjects.indexOf(auth_subj_array[j]) + 1] = 1;
+              matrix.push([1]);
+              console.log(matrix);
+            }
+            matrix[0][1+subjects.indexOf(subject)] = datastructure["authors"][url_id][subject];
+            matrix[subjects.indexOf(subject)][0] = datastructure["coauthors"][url_id][subject];
+//            console.log(matrix); 
+          }
+        }
+        console.log(datastructure);
+
+        datastructure["coauthors"][url_id]["howmany"] = coauthor_query["search-results"]["opensearch:totalResults"];
+        var url_start = parseInt(url.match(/start=(\d+)/)[1]);
+        datastructure["coauthors"][url_id]["start"] = url_start + datastructure["coauthors"][url_id]["count"];
+        datastructure["coauthors"][url_id]["count"] = datastructure["coauthors"][url_id]["howmany"] - datastructure["coauthors"][url_id]["start"]
+
+for (matrix_i = 0; matrix_i < matrix.length; matrix_i++) {
+  for (matrix_j = 0; matrix_j < matrix.length; matrix_j++) {
+    if (typeof matrix[matrix_i][matrix_j] === 'undefined') {
+      matrix[matrix_i][matrix_j] = 0;
+    }
+  }
+}
+
+var chord = d3.layout.chord()
+    .padding(.05)
+    .sortSubgroups(d3.descending)
+    .matrix(matrix);
+
+var width = 1200,
+    height = 900,
+    innerRadius = Math.min(width, height) * .35,
+    outerRadius = innerRadius * 1.05;
+
+var fill = d3.scale.category20c();
+
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+  .append("g")
+    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+var viz_groups = svg.selectAll(".group")
+    .data(chord.groups)
+  .enter().append("g")
+    .attr("class","group");
+
+viz_groups.append("path")
+    .style("fill", function(d) { return fill(d.index); })
+    .style("stroke", function(d) { return fill(d.index); })
+    .attr("d", d3.svg.arc().innerRadius(innerRadius).outerRadius(outerRadius))
+
+viz_groups.append("text")
+      .each(function(d) { d.angle = (d.startAngle + d.endAngle) / 2; })
+        .attr("dy", ".35em")
+        .attr("transform", function(d) {
+          return "rotate(" + (d.angle * 180 / Math.PI - 90) + ")"
+            + "translate(" + (innerRadius + 26) + ")"
+            + (d.angle > Math.PI ? "rotate(180)" : "");
+        })
+        .style("text-anchor", function(d) { return d.angle > Math.PI ? "end" : null; })
+        .text(function(d) { console.log(subjects[d.index]);if (/\d+/.test(subjects[d.index])) {return subjects[d.index];} else {return subjects_lookup[subjects[d.index]];} });
+
+var viz_chords = svg.append("g")
+    .attr("class", "chord")
+  .selectAll("path")
+    .data(chord.chords)
+  .enter().append("path")
+    .attr("d", d3.svg.chord().radius(innerRadius))
+    .style("fill", function(d) { return fill(d.target.index); })
+    .style("opacity", 1);
+
+
+
+//        url = url.replace(/start=\d+/,"start="+datastructure["coauthors"])
+      }); 
+    });
+  })
+
+}); 
+
+
+
+
+
+
+
+
+//  datastructure = getAuthor(id,datastructure)
+
+
+
+//          console.log(coauthor_query)
+//
+//
+//      });
+
+
+//      console.log("author id: " + author_id);
+
+////        ds = getCoauthors(author_id,ds);
+//          for (var index = 0; index < coauthor_query["search-results"]["entry"].length; index++ ) {
+//            coauth_subj_array = coauthor_query["search-results"]["entry"][index]["subject-area"].map(function(subj){return subj["@abbrev"]});
+//            console.log(id + " Coauthor Subjects: " + coauth_subj_array);
+//            for (var i = 0; i < coauth_subj_array.length; i++) {
+//              if (!(coauth_subj_array[i] in datastructure["coauthors"][id])) {
+//                datastructure["coauthors"][id][coauth_subj_array[i]] = 1;
+//              } else {
+//                datastructure["coauthors"][id][coauth_subj_array[i]]++;
+//              }
+//              if (!(coauth_subj_array[i] in datastructure["authors"][id])) {
+//                datastructure["authors"][id][coauth_subj_array[i]] = 0 ;
+//              }
+//            }
+//          }
+//          datastructure["coauthors"][id]["start"] = datastructure["coauthors"][id]["start"] + datastructure["coauthors"][id]["count"];
+//          diff = datastructure["coauthors"][id]["howmany"] - datastructure["coauthors"][id]["start"];
+//          console.log(id + ": " + diff + " ... " + datastructure["coauthors"][id]["start"])
+//          if (diff < datastructure["coauthors"][id]["count"]) {
+//            datastructure["coauthors"][id]["count"] = diff
+//          }
+//          while (diff > 0) {
+//            d3.json("https://api.elsevier.com/content/search/author?insttoken=643f5557efad323a4cbc87ecdf059e92&apiKey=e2f267b7ed10a433dcb8856663ec3e71&co-author="+id+"&start"+datastructure["coauthors"][id]["start"]+"&count="+datastructure["coauthors"][id]["count"]+"&query=au-id(nil)", function(error, coauthor_query) {
+//              console.log(coauthor_query)
+//              if (datastructure["coauthors"][id]["howmany"] == 0) {
+//                datastructure["coauthors"][id]["howmany"] = coauthor_query["search-results"]["opensearch:totalResults"];
+//              }
+//              for (var index = 0; index < coauthor_query["search-results"]["entry"].length; index++ ) {
+//                coauth_subj_array = coauthor_query["search-results"]["entry"][index]["subject-area"].map(function(subj){return subj["@abbrev"]});
+//                console.log(id + " Coauthor Subjects: " + coauth_subj_array);
+//                for (var i = 0; i < coauth_subj_array.length; i++) {
+//                  if (!(coauth_subj_array[i] in datastructure["coauthors"][id])) {
+//                datastructure["coauthors"][id][coauth_subj_array[i]] = 1;
+//              } else {
+//                datastructure["coauthors"][id][coauth_subj_array[i]]++;
+//              }
+//              if (!(coauth_subj_array[i] in datastructure["authors"][id])) {
+//                datastructure["authors"][id][coauth_subj_array[i]] = 0 ;
+//              }
+//            }
+//          }
+//          datastructure["coauthors"][id]["start"] = datastructure["coauthors"][id]["start"] + datastructure["coauthors"][id]["count"];
+//          diff = datastructure["coauthors"][id]["howmany"] - datastructure["coauthors"][id]["start"];
+//          console.log(id + ": " + diff + " ... " + datastructure["coauthors"][id]["start"])
+//          if (diff < datastructure["coauthors"][id]["count"]) {
+//            datastructure["coauthors"][id]["count"] = diff
+//          }
+//            });
+//          }
+//        });
+//      });
+//    }
+//});
+
+function getCoauthors(coauthors_id,ds) {
+  console.log("coauthors_id: " + coauthors_id + ", start: " + ds["coauthors"][coauthors_id]["start"] + ", count: " + ds["coauthors"][coauthors_id]["count"] + ", howmany: " + ds["coauthors"][coauthors_id]["howmany"] );
+  d3.json("https://api.elsevier.com/content/search/author?insttoken=643f5557efad323a4cbc87ecdf059e92&apiKey=e2f267b7ed10a433dcb8856663ec3e71&co-author="+coauthors_id+"&start"+ds["coauthors"][coauthors_id]["start"]+"&count="+ds["coauthors"][coauthors_id]["count"]+"&query=au-id(nil)", function(error, coauthor_query) {
+    console.log(coauthor_query)
+    if (ds["coauthors"][coauthors_id]["howmany"] == 0) {
+      ds["coauthors"][coauthors_id]["howmany"] = coauthor_query["search-results"]["opensearch:totalResults"];
+    }
+    for (var index = 0; index < coauthor_query["search-results"]["entry"].length; index++ ) {
+      coauth_subj_array = coauthor_query["search-results"]["entry"][index]["subject-area"].map(function(subj){return subj["@abbrev"]});
+      console.log(coauthors_id + " Coauthor Subjects: " + coauth_subj_array);
+      for (var i = 0; i < coauth_subj_array.length; i++) {
+        if (!(coauth_subj_array[i] in ds["coauthors"][coauthors_id])) {
+          ds["coauthors"][coauthors_id][coauth_subj_array[i]] = 1;
+        } else {
+          ds["coauthors"][coauthors_id][coauth_subj_array[i]]++;
+        }
+        if (!(coauth_subj_array[i] in ds["authors"][coauthors_id])) {ds["authors"][coauthors_id][coauth_subj_array[i]] = 0 ;}
+      }
+    }
+    ds["coauthors"][coauthors_id]["start"] = ds["coauthors"][coauthors_id]["start"] + ds["coauthors"][coauthors_id]["count"];
+    diff = ds["coauthors"][coauthors_id]["howmany"] - ds["coauthors"][coauthors_id]["start"];
+    console.log(coauthors_id + ": " + diff + " ... " + ds["coauthors"][coauthors_id]["start"])
+    if (diff < ds["coauthors"][coauthors_id]["count"]) {
+      ds["coauthors"][coauthors_id]["count"] = diff
+    }
+    if (diff > 0) {
+      ds = getCoauthors(coauthors_id,ds)
+    }
+    return ds;
+  }); 
+}
+
+
+
+
+
+
+
+</script>
+</body>
