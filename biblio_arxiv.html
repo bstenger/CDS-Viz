@@ -44,7 +44,7 @@ d3.csv("./data/data-scientists.csv", function(scientist) {
   Object.keys(datastructure["authors"]).forEach(function(author_id) {
 
     d3.xml("http://export.arxiv.org/api/query?search_query=au:+Hogg_D&max_results=200", function(error, author_query) {
-//    d3.json("https://api.elsevier.com/content/author/eid/" + author_id + "?insttoken=643f5557efad323a4cbc87ecdf059e92&apiKey=e2f267b7ed10a433dcb8856663ec3e71&httpAccept=application/json", function(error,author_query) {
+//    d3.json("https://api.elsevier.com/content/author/eid/" + author_id + "?insttoken=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&apiKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&httpAccept=application/json", function(error,author_query) {
       author_query = [].map.call(author_query.querySelectorAll("entry"), function(entry) {
         return {
           authors: [].map.call(entry.querySelectorAll("author"), function(author) {
@@ -193,7 +193,7 @@ d3.csv("./data/data-scientists.csv", function(scientist) {
 //            datastructure["coauthors"][id]["count"] = diff
 //          }
 //          while (diff > 0) {
-//            d3.json("https://api.elsevier.com/content/search/author?insttoken=643f5557efad323a4cbc87ecdf059e92&apiKey=e2f267b7ed10a433dcb8856663ec3e71&co-author="+id+"&start"+datastructure["coauthors"][id]["start"]+"&count="+datastructure["coauthors"][id]["count"]+"&query=au-id(nil)", function(error, coauthor_query) {
+//            d3.json("https://api.elsevier.com/content/search/author?insttoken=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&apiKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&co-author="+id+"&start"+datastructure["coauthors"][id]["start"]+"&count="+datastructure["coauthors"][id]["count"]+"&query=au-id(nil)", function(error, coauthor_query) {
 //              console.log(coauthor_query)
 //              if (datastructure["coauthors"][id]["howmany"] == 0) {
 //                datastructure["coauthors"][id]["howmany"] = coauthor_query["search-results"]["opensearch:totalResults"];
@@ -227,7 +227,7 @@ d3.csv("./data/data-scientists.csv", function(scientist) {
 
 function getCoauthors(coauthors_id,ds) {
   console.log("coauthors_id: " + coauthors_id + ", start: " + ds["coauthors"][coauthors_id]["start"] + ", count: " + ds["coauthors"][coauthors_id]["count"] + ", howmany: " + ds["coauthors"][coauthors_id]["howmany"] );
-  d3.json("https://api.elsevier.com/content/search/author?insttoken=643f5557efad323a4cbc87ecdf059e92&apiKey=e2f267b7ed10a433dcb8856663ec3e71&co-author="+coauthors_id+"&start"+ds["coauthors"][coauthors_id]["start"]+"&count="+ds["coauthors"][coauthors_id]["count"]+"&query=au-id(nil)", function(error, coauthor_query) {
+  d3.json("https://api.elsevier.com/content/search/author?insttoken=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&apiKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&co-author="+coauthors_id+"&start"+ds["coauthors"][coauthors_id]["start"]+"&count="+ds["coauthors"][coauthors_id]["count"]+"&query=au-id(nil)", function(error, coauthor_query) {
     console.log(coauthor_query)
     if (ds["coauthors"][coauthors_id]["howmany"] == 0) {
       ds["coauthors"][coauthors_id]["howmany"] = coauthor_query["search-results"]["opensearch:totalResults"];

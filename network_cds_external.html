@@ -188,8 +188,7 @@ d3.csv("./data/all-data-scientists.csv", function(scientist) {
     .attr("class", "link")
 
   for (var i = 0; i < NYU_CDS.length; i++) {
-
-    d3.json("https://api.elsevier.com/content/author/eid/" + NYU_CDS[i] + "?insttoken=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&apiKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", function(error, author_query) {
+    d3.json("https://api.elsevier.com/content/author/author_id/" + NYU_CDS[i] + "?insttoken=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&apiKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", function(error, author_query) {
               var author_id = author_query["author-retrieval-response"][0]["coredata"]["dc:identifier"].split(":")[1];
               console.log(author_id);
               var author_obj = network["nodes"].filter(function(d){return d["id"] === author_id });

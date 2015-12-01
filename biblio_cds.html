@@ -76,7 +76,7 @@ d3.csv("./data/data-scientists.csv", function(scientist) {
   console.log(Object.keys((datastructure["authors"])))
   Object.keys(datastructure["authors"]).forEach(function(author_id) {
 
-    d3.json("https://api.elsevier.com/content/author/eid/" + author_id + "?insttoken=643f5557efad323a4cbc87ecdf059e92&apiKey=e2f267b7ed10a433dcb8856663ec3e71&httpAccept=application/json", function(error,author_query) {
+    d3.json("https://api.elsevier.com/content/author/eid/" + author_id + "?insttoken=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&apiKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&httpAccept=application/json", function(error,author_query) {
       console.log(author_query);
       var auth_subj_array = author_query["author-retrieval-response"][0]["subject-areas"]["subject-area"].map(function(subj) { return subj["@abbrev"]});
       var coredata_id = author_query["author-retrieval-response"][0]["coredata"]["dc:identifier"].split(":")[1];
@@ -97,7 +97,7 @@ d3.csv("./data/data-scientists.csv", function(scientist) {
       }
 //      console.log(datastructure);
 
-      d3.json("https://api.elsevier.com/content/search/author?insttoken=643f5557efad323a4cbc87ecdf059e92&apiKey=e2f267b7ed10a433dcb8856663ec3e71&co-author="+coredata_id+"&start=0&count=180&query=au-id(nil)", function(error, coauthor_query) {
+      d3.json("https://api.elsevier.com/content/search/author?insttoken=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&apiKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&co-author="+coredata_id+"&start=0&count=180&query=au-id(nil)", function(error, coauthor_query) {
 
         console.log(coauthor_query);
         var url = coauthor_query["search-results"]["link"][0]["@href"];
@@ -241,7 +241,7 @@ var viz_chords = svg.append("g")
 //            datastructure["coauthors"][id]["count"] = diff
 //          }
 //          while (diff > 0) {
-//            d3.json("https://api.elsevier.com/content/search/author?insttoken=643f5557efad323a4cbc87ecdf059e92&apiKey=e2f267b7ed10a433dcb8856663ec3e71&co-author="+id+"&start"+datastructure["coauthors"][id]["start"]+"&count="+datastructure["coauthors"][id]["count"]+"&query=au-id(nil)", function(error, coauthor_query) {
+//            d3.json("https://api.elsevier.com/content/search/author?insttoken=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&apiKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&co-author="+id+"&start"+datastructure["coauthors"][id]["start"]+"&count="+datastructure["coauthors"][id]["count"]+"&query=au-id(nil)", function(error, coauthor_query) {
 //              console.log(coauthor_query)
 //              if (datastructure["coauthors"][id]["howmany"] == 0) {
 //                datastructure["coauthors"][id]["howmany"] = coauthor_query["search-results"]["opensearch:totalResults"];
@@ -275,7 +275,7 @@ var viz_chords = svg.append("g")
 
 function getCoauthors(coauthors_id,ds) {
   console.log("coauthors_id: " + coauthors_id + ", start: " + ds["coauthors"][coauthors_id]["start"] + ", count: " + ds["coauthors"][coauthors_id]["count"] + ", howmany: " + ds["coauthors"][coauthors_id]["howmany"] );
-  d3.json("https://api.elsevier.com/content/search/author?insttoken=643f5557efad323a4cbc87ecdf059e92&apiKey=e2f267b7ed10a433dcb8856663ec3e71&co-author="+coauthors_id+"&start"+ds["coauthors"][coauthors_id]["start"]+"&count="+ds["coauthors"][coauthors_id]["count"]+"&query=au-id(nil)", function(error, coauthor_query) {
+  d3.json("https://api.elsevier.com/content/search/author?insttoken=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&apiKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&co-author="+coauthors_id+"&start"+ds["coauthors"][coauthors_id]["start"]+"&count="+ds["coauthors"][coauthors_id]["count"]+"&query=au-id(nil)", function(error, coauthor_query) {
     console.log(coauthor_query)
     if (ds["coauthors"][coauthors_id]["howmany"] == 0) {
       ds["coauthors"][coauthors_id]["howmany"] = coauthor_query["search-results"]["opensearch:totalResults"];
