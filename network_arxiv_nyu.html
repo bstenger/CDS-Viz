@@ -32,10 +32,188 @@ fill:#555;
 </style>
 <body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+<table><tr>
+  <td class="viz"></td>
+  <td class="key"></td>
+</tr></table>
 <script>
 
 var network = {"nodes":[],"links":[],"lookup":{} };
+var name_dept_lookup = {};
 var node,link, authors, scientists;
+var dept_lookup = {
+  "16549165900":"Berkeley Center for Cosmological Physics",
+  "7101915128":"Berkeley Seismological Lab",
+  "6506957133":"Bothell Library",
+  "6602892213":"Center for Data Science",
+  "55863443600":"Center for Effective Global Action",
+  "55666345400":"Data Analytics and Visualization",
+  "7202077437":"Data Science and Technology Department",
+  "8572128400":"Department of Anthropology",
+  "7003657764":"Department of Applied Mathematics",
+  "7101674211":"Department of Applied Mathematics",
+  "15065850600":"Department of Applied Mathematics",
+  "35236469300":"Department of Astronomy",
+  "55566574300":"Department of Astronomy",
+  "55252898300":"Department of Astronomy",
+  "55322718500":"Department of Astronomy",
+  "7005608414":"Department of Astronomy",
+  "7003941191":"Department of Astronomy",
+  "6602412939":"Department of Astronomy",
+  "7004614529":"Department of Astronomy",
+  "7402746313":"Department of Astronomy",
+  "35111982900":"Department of Astronomy",
+  "55463548900":"Department of Biochemistry",
+  "7006220926":"Department of Bioengineering",
+  "6701490066":"Department of Bioengineering",
+  "6701626834":"Department of Biological Oceanography",
+  "26638612300":"Department of Biological Oceanography",
+  "13409570300":"Department of Biology",
+  "7201677078":"Department of Biology",
+  "7004253021":"Department of Biology",
+  "55660513600":"Department of Biology",
+  "26321182700":"Department of Biostatistics",
+  "24339773500":"Department of Biostatistics",
+  "55151658000":"Department of Chemical Engineering",
+  "8924119700":"Department of Chemical Engineering",
+  "24331435900":"Department of Chemical Oceanography",
+  "7006589757":"Department of Chemical Oceanography",
+  "24174765500":"Department of Chemical Oceanography",
+  "35772345700":"Department of Communication",
+  "34868596300":"Department of Communication",
+  "22936904400":"Department of Computer Science and Engineering",
+  "51663204600":"Department of Computer Science and Engineering",
+  "54919399500":"Department of Computer Science and Engineering",
+  "7102998878":"Department of Computer Science and Engineering",
+  "56123309500":"Department of Computer Science and Engineering",
+  "6603794736":"Department of Computer Science and Engineering",
+  "35561994000":"Department of Computer Science and Engineering",
+  "7004072107":"Department of Computer Science and Engineering",
+  "7005843277":"Department of Computer Science and Engineering",
+  "24802384500":"Department of Computer Science and Engineering",
+  "7102482003":"Department of Computer Science and Engineering",
+  "8450420300":"Department of Computer Science and Engineering",
+  "35176314800":"Department of Computer Science and Engineering",
+  "37044239600":"Department of Computer Science and Engineering",
+  "7006812452":"Department of Computer Science and Engineering",
+  "55832058300":"Department of Earth & Space Sciences",
+  "7005884875":"Department of Earth & Space Sciences",
+  "7404224110":"Department of Earth and Planetary Science",
+  "7003705752":"Department of Electrical Engineering",
+  "6603356372":"Department of Electrical Engineering",
+  "7006652174":"Department of Electrical Engineering",
+  "56702218200":"Department of Electrical Engineering",
+  "56076810200":"Department of Electrical Engineering",
+  "35447121700":"Department of Electrical Engineering",
+  "56100683300":"Department of Electrical Engineering",
+  "7202466727":"Department of Electrical Engineering and Computer Science",
+  "7005125209":"Department of Electrical Engineering and Computer Science",
+  "7004874505":"Department of Electrical Engineering and Computer Science",
+  "7202284265":"Department of Electrical Engineering and Computer Science",
+  "7007009125":"Department of Electrical Engineering and Computer Science",
+  "15753693500":"Department of Environmental Science, Policy and Management",
+//NONE:"Department of Environmental Science, Policy and Management"
+  "55156107300":"Department of Environmental Science, Policy and Management",
+  "52264707100":"Department of Environmental Science, Policy and Management",
+  "16305430100":"Department of Finance & Business Economics",
+  "36135442500":"Department of Geography",
+  "7402181546":"Department of Geography",
+  "23969559100":"Department of Geography",
+  "55604135600":"Department of Health Services",
+  "11040842000":"Department of History",
+  "34881432100":"Department of Human Centered Design & Engineering",
+  "36129531300":"Department of Human Centered Design & Engineering",
+  "35092769000":"Department of Human Centered Design & Engineering",
+  "56262941900":"Department of Human Centered Design & Engineering",
+  "35793979100":"Department of Human Centered Design & Engineering",
+//couldn't find:Department of Industrial and Systems Engineering
+  "7004214819":"Department of Integrative Biology",
+  "6601958116":"Department of Integrative Biology",
+  "7103303554":"Department of Marine Geology and Geophysics",
+  "10040543400":"Department of Mathematics",
+  "7005832375":"Department of Mathematics",
+  "7202425026":"Department of Microbiology",
+  "7006316240":"Department of Molecular & Cell Biology",
+  "26642886600":"Department of Physical Oceanography",
+  "35587189700":"Department of Physical Oceanography",
+  "54580801600":"Department of Physics",
+  "35273021600":"Department of Physics",
+  "7005431498":"Department of Physics",
+  "6602928622":"Department of Physiology and Biophysics",
+  "6701386664":"Department of Political Science",
+  "7101889079":"Department of Political Science",
+  "36170954000":"Department of Psychiatry & Behavioral Sciences",
+  "7101824367":"Department of Psychology",
+  "35409148500":"Department of Psychology",
+  "7201727629":"Department of Sociology",
+  "8838786400":"Department of Sociology",
+//NONE:"Department of Sociology"
+  "6603585074":"Department of Sociology",
+  "37120467400":"Department of Sociology",
+  "35484356000":"Department of Speech and Hearing Sciences",
+  "15063937600":"Department of Statistics",
+  "6602862447":"Department of Statistics",
+  "6508062729":"Department of Statistics",
+  "38961174000":"Department of Statistics",
+  "8835585600":"Department of Statistics",
+  "56567638600":"Department of Statistics",
+  '7102205776':"Department of Statistics",
+  "7202006961":"Department of Statistics",
+  "36061039400":"Department of Statistics",
+  "6507125871":"Department of Statistics",
+  "7006657487":"Department of Statistics",
+  "7006212242":"Department of Statistics",
+  "36907688100":"Department of Statistics",
+  '7101748197':"Department of Statistics",
+  "6603949599":"Department of Statistics",
+  "12801961000":"Energy & Resources Group",
+  "55636448200":"Engineering Research Center",
+  "56050848100":"Engineering Research Center",
+  "56010228700":"Engineering Research Center",
+  "25641892300":"Engineering Research Center",
+  "12805039400":"Engineering Research Center",
+//too many choices:"Engineering Research Center"
+  "55758447400":"eScience Institute",
+//None:eScience Institute
+  "7103088398":"Goldman School of Public Policy",
+  "55372633500":"Helen Wills Neuroscience Institute",
+  "6602473756":"Information School",
+  "7403081906":"Information School",
+  "36922389600":"Information School",
+  "56367236700":"Institute for Data Science",
+//NONE:"Institute for Data Science"
+//NONE:"Institute for Data Science"
+  "54381582800":"Institute for Data Science",
+  "6507543002":"Institute for Data Science",
+//None:"Institute for Data Science"
+  "23493713400":"Institute for Data Science",
+  "35352423900":"Institute for Data Science",
+  "56404757400":"Institute for Data Science",
+  "54973637600":"Institute for Data Science",
+  "14827670900":"Institute for Data Science",
+  "15732291000":"Institute for Data Science",
+  "35103808100":"Institute for Learning and Brain Sciences",
+  "56706284600":"Institute of Translational Health Sciences",
+  "7005649912":"Institute of Urban & Regional Development",
+  "24071588400":"Library Administration",
+  "15751626600":"Museum of Paleontology",
+  "17134891800":"Richard B. Gump Moorea Field Station",
+  "55366464800":"School of Aquatic and Fishery Sciences",
+  "7201692538":"School of Information",
+  "7404788512":"School of Information",
+  "56568370600":"Space Sciences Laboratory",
+  "35463384200":"Space Sciences Laboratory",
+  "7005139909":"UW Information Technology",
+  "7801369638":"UW Information Technology",
+};
+
+d3.csv("./data/data-scientists-with-affiliations.csv", function(researchers) {
+  researchers.forEach(function(r){
+    name_dept_lookup[r["First "]+r["Last"]] = r["Home department"];
+//    dept_lookup[r["Elsevier ID"].toString()] = r["Home department"];
+  });
+});
+console.log(dept_lookup);
 
 var subjects_lookup = { //.. change to arXiv
   "AGRI":"Agricultural/Biological Sciences", //..med 1 BLUE #0078A8
@@ -131,7 +309,7 @@ var force = d3.layout.force()
     .linkDistance(100)
     .size([width, height])
     .on("tick",tick)
-var svg = d3.select("body").append("svg")
+var svg = d3.select("body").select("td.viz").append("svg")
     .attr("width", width)
     .attr("height", height);
 node = svg.selectAll(".node").data(network["nodes"]);
@@ -149,11 +327,18 @@ d3.csv("./data/nyu-data-arxiv.csv", function(rows) {
       .attr("id",function(d){return d.id;})
       .call(force.drag);
   node.append("circle")
-    .attr("r","4")
-    .style("fill","white")
+    .attr("r","8")
+    .style("fill", function(d) {
+      if ( typeof name_dept_lookup[d.id] != undefined ) {
+        return fill(name_dept_lookup[d.id]);
+      } else {
+        return "black";
+      }
+    })
+//    .style("fill","white")
     .style("stroke","black")
   node.append("text")
-    .attr("dx", 5)
+    .attr("dx", 8)
     .attr("dy", ".35em")
     .text(function(d) { return d.name });
 
@@ -187,7 +372,7 @@ d3.csv("./data/nyu-data-arxiv.csv", function(rows) {
               network.nodes.forEach(function(check_author){
                 var rgx_firstname = new RegExp(check_author.first);
                 var rgx_firstinitial = new RegExp("^"+check_author.first.substring(0,1)+".");
-                var rgx_lastname = new RegExp(check_author.last);
+                var rgx_lastname = new RegExp(check_author.last+"$");
                 var rgx_target = new RegExp(check_author.id);
                 var target_obj = network.nodes.filter(function(d){return rgx_target.test(d.id);});
                 var target_index = target_obj[0].index;
@@ -224,6 +409,35 @@ d3.csv("./data/nyu-data-arxiv.csv", function(rows) {
     });
   }, 1000);
 });
+
+var all_departments = [];
+setTimeout(function(){
+  all_departments = d3.set(network.nodes.map(function(d){return name_dept_lookup[d.id];})).values();
+  var key = d3.select("body").select("td.key").append("svg")
+    .attr("width", 250)
+    .attr("height", height);
+  var key_item = key.selectAll(".item").data(all_departments);
+  key_item.enter().append("g")
+    .attr("class","item")
+  key_item.append("circle")
+    .attr("r","8")
+    .style("fill", function(d){
+      if (d.match(/undefined/)) {
+        return "black";
+      } else {
+        return fill(d);
+      }
+    })
+    .style("stroke","black")
+  key_item.append("text")
+    .attr("dx", 9)
+    .attr("dy", ".35em")
+    .text(function(d) { return d; });
+  key_item.attr("transform", function(d) { return "translate(12," + (10+20*all_departments.indexOf(d)) + ")"; });
+}, 5000);
+
+
+
 
 function papers2links(author, scientists, network) {
   var rgx_firstname = new RegExp(author.first);
